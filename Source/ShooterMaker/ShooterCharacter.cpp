@@ -3,7 +3,11 @@
 
 #include "ShooterCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "Engine/SkeletalMeshSocket.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 
 
 AShooterCharacter::AShooterCharacter() :
@@ -23,6 +27,20 @@ AShooterCharacter::AShooterCharacter() :
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera222"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false; //相机不跟随controller旋转
+
+	//角色不跟随controller(鼠标)旋转，controller只影响camera
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+
+	
+	GetCharacterMovement()->bOrientRotationToMovement = true;//角色跟随输入的方向旋转
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
+	
+	GetCharacterMovement()->JumpZVelocity = 600.f;
+	GetCharacterMovement()->AirControl = 0.2f;//[0, 1]在空中时输入的影响
+	
+	
 }
 
 void AShooterCharacter::BeginPlay()
@@ -66,6 +84,42 @@ void AShooterCharacter::LookUpAtRate(float Rate)
 
 }
 
+void AShooterCharacter::FireWeapon()
+{
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			3,
+			0.15f,
+			FColor::Red,
+			FString("Fire111"),
+			false
+			);
+	}
+	
+	if (FireSound )
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), FireSound);
+	}
+	
+	const USkeletalMeshSocket* BarrelSocket = GetMesh()->GetSocketByName("BarrelSocket");
+	if (BarrelSocket)
+	{
+		const FTransform SocketTransform = BarrelSocket->GetSocketTransform(GetMesh());
+		if (MuzzleFlash)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFlash, SocketTransform);
+			
+		}
+	}
+
+	if (FireMontage)
+	{
+		GetMesh()->GetAnimInstance()->Montage_Play(FireMontage);
+		GetMesh()->GetAnimInstance()->Montage_JumpToSection(FName("StartFire"));
+	}
+}
+
 // Called every frame
 void AShooterCharacter::Tick(float DeltaTime)
 {
@@ -92,5 +146,7 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	// PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	
+	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AShooterCharacter::FireWeapon);
 
 }

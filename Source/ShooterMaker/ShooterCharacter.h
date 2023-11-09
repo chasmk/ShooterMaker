@@ -28,6 +28,8 @@ protected:
 	void TurnAtRate(float Rate); //Rate 介于0-1之间, 1代表100%是我们期望速率
 	void LookUpAtRate(float Rate); //Rate 介于0-1之间
 
+	void FireWeapon();//按下鼠标左键时触发
+
 private:
 	/**
 	 * @brief 用于连接角色和相机的弹簧臂
@@ -40,6 +42,19 @@ private:
 	float BaseTurnRate; //单位是 度/秒
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	float BaseLookUpRate; //单位是 度/秒，
+
+	/** 随机的子弹声 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Combat, meta = (AllowPrivateAccess = "true"))
+	class USoundCue* FireSound;
+
+	/** 枪口的flash */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Combat, meta = (AllowPrivateAccess = "true"))
+	class UParticleSystem* MuzzleFlash;
+	
+	/** 开枪动画蒙太奇 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Combat, meta = (AllowPrivateAccess = "true"))
+	class UAnimMontage* FireMontage;
+	
 public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }

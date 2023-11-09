@@ -215,3 +215,23 @@ PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 
 ## 3 动画系统
 
+> 这里主要写在角色类实现的与ABP相关的内容
+
+### 3.1 controller与输入方向的控制切换
+
+初始我们设置角色只根据输入的方向旋转自己，Controller只转Camera Boom
+
+```c++
+//角色不跟随controller(鼠标)旋转，controller只影响camera
+bUseControllerRotationPitch = false;
+bUseControllerRotationYaw = false;
+bUseControllerRotationRoll = false;
+
+
+GetCharacterMovement()->bOrientRotationToMovement = true;//角色跟随输入的方向旋转
+GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
+
+GetCharacterMovement()->JumpZVelocity = 600.f;
+GetCharacterMovement()->AirControl = 0.2f;//[0, 1]在空中时输入的影响
+```
+
