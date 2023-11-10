@@ -1,5 +1,9 @@
 # 动画系统
 
+> 官方系列教程：https://www.youtube.com/watch?v=ffuq5k-j0AY&t=3627s&ab_channel=UnrealEngine
+>
+> ​	part3：https://www.twitch.tv/videos/278640857
+
 ## 0 基础概念
 
 - **Anim Montage**: 动画蒙太奇可包含一个或多个动画的资产。它至少有一个Section - 称为 "Default"。可以在蒙太奇时间轴的任意位置向蒙太奇添加新的Section。您可以随意移动、调整等。
@@ -8,29 +12,37 @@
 - **Slot**: 插槽Slot是一种标识符，是一种可以分配给动画蒙太奇的标签。当一个动画蒙太奇使用了一个特定的slot时，该slot可用于选择性地将pose信息添加到使用特定动画蓝图的角色中，具体做法是在动画 BP 中添加一个slot节点，并选择相关的slot名称。在播放蒙太奇时，动画蓝图中的pose将通过使用给定slot的slot节点 "添加 "到该姿势数据中。我在 "添加 "前加了引号，因为这取决于蒙太奇中的动画是否是Addictive的。
   - 如果不是Addictive，在播放时，姿势将被蒙太奇中的动画完全覆盖。
   - 如果这些动画是Addictive的，它们将被添加到通过槽节点输入的姿势数据之上。
+
+### Blend 节点
+
+> 官方文档：https://docs.unrealengine.com/4.26/en-US/AnimatingObjects/SkeletalMeshAnimation/NodeReference/Blend/
+
 - **Layered Blend Per Bone**[官方讲解](https://youtu.be/ffuq5k-j0AY?t=3627): 假如我们想在跑步时开枪，此时只需要上半身开枪，下半身跑步，就可以用这个节点实现。
+
   - base pose 0是基础的运动动画
+
   - base pose 1是需要在某骨骼上混合的动画，例如开枪动画
-  - Blend Weights是Additive pose的影响程度，1代表Additive完全添加到Base pose中，看源码这应该是混合的上限，如下。
 
-```c++
-float TargetBlendWeight = BlendWeights[PoseIndex] * SrcBoneBlendWeights[BoneIndex].BlendWeight;
-```
+  - Blend Weights是Additive pose的影响程度，1代表Additive完全添加到Base pose中，看源码`AnimationRuntime.cpp`这应该是混合的上限，如下。
 
-- Branch Filters: 这里设置混合的Bone Name和Blend Depth
+  - ```c++
+    float TargetBlendWeight = BlendWeights[PoseIndex] * SrcBoneBlendWeights[BoneIndex].BlendWeight;
+    ```
 
-  - Bone Name: 骨骼名，如pelvis, spine_01, thigh_01等等。
+  - Branch Filters: 这里设置混合的Bone Name和Blend Depth
 
-  - Blend Depth: 混合深度，代表每层深度添加的混合权重。源码中这么写的：
+    - Bone Name: 骨骼名，如pelvis, spine_01, thigh_01等等。
 
-    - ```c++
-      // how much weight increase Per depth
-      const float IncreaseWeightPerDepth = (BranchFilter.BlendDepth != 0) ? (1.f/((float)BranchFilter.BlendDepth)) : 1.f;
-      ```
+    - Blend Depth: 混合深度，代表每层深度添加的混合权重。源码中这么写的：
 
-  - 例如Bone Name = "pelvis"， Blend Depth = 4。此时每层添加的权重就是1/4 = 0.25。blend的顺序是pelvis，spine_01, spine_0, spine_03。到达spine_03后，它将播放100%混合后的开枪动画。其它的如pelvis只播放25%, spine_01播放50%, spine_02播放75%。
+      - ```c++
+        // how much weight increase Per depth
+        const float IncreaseWeightPerDepth = (BranchFilter.BlendDepth != 0) ? (1.f/((float)BranchFilter.BlendDepth)) : 1.f;
+        ```
 
-  - 当Blend Depth设置为-1时，表示不要blend这部分bone
+    - 例如Bone Name = "pelvis"， Blend Depth = 4。此时每层添加的权重就是1/4 = 0.25。blend的顺序是pelvis，spine_01, spine_0, spine_03。到达spine_03后，它将播放100%混合后的开枪动画。其它的如pelvis只播放25%, spine_01播放50%, spine_02播放75%。
+
+    - 当Blend Depth设置为-1时，表示不要blend这部分bone
 
 ## 1 C++基类创建
 

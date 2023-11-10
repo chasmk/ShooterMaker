@@ -29,6 +29,7 @@ protected:
 	void LookUpAtRate(float Rate); //Rate 介于0-1之间
 
 	void FireWeapon();//按下鼠标左键时触发
+	bool GetDesiredTraceLocation(const FVector& Start, FVector& End);//获取真实的trace轨迹
 
 private:
 	/**
@@ -54,6 +55,14 @@ private:
 	/** 开枪动画蒙太奇 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Combat, meta = (AllowPrivateAccess = "true"))
 	class UAnimMontage* FireMontage;
+
+	/**命中时的particle*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Combat, meta = (AllowPrivateAccess = "true"))
+	UParticleSystem* ImpactParticle;
+
+	/**子弹轨迹particle*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Combat, meta = (AllowPrivateAccess = "true"))
+	UParticleSystem* BeamParticle;
 	
 public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

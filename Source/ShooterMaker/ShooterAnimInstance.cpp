@@ -2,18 +2,18 @@
 
 
 #include "ShooterAnimInstance.h"
-#include "ShooterCharacter.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
-	GEngine->AddOnScreenDebugMessage(1, 10.f, FColor::Blue, FString::Printf(TEXT("Speed %f"), Speed));
-	GEngine->AddOnScreenDebugMessage(2, 10.f, FColor::Red, FString::Printf(TEXT("bIsAccelerating %d"), bIsAccelerating));
+	
 	if (ShooterCharacter == nullptr)
 	{
-		ShooterCharacter = Cast<AShooterCharacter>(TryGetPawnOwner());
+		ShooterCharacter = Cast<ACharacter>(TryGetPawnOwner());
 	}
 	if(ShooterCharacter)
 	{
@@ -29,6 +29,16 @@ void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bIsAccelerating =
 			ShooterCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f ? true : false;
 
+		FRotator AimRotaion = ShooterCharacter->GetBaseAimRotation();//跟随相机旋转改变值
+		FRotator MovementRotation = ShooterCharacter->GetVelocity().Rotation();//跟随输入方向改变值
+			//UKismetMathLibrary::MakeRotFromX(ShooterCharacter->GetVelocity())两个效果好像一样
+		MovementOffsetYaw = UKismetMathLibrary::NormalizedDeltaRotator(AimRotaion, MovementRotation).Yaw;
+		GEngine->AddOnScreenDebugMessage(
+				4,
+				0.f,
+				FColor::Orange,
+				FString::Printf(TEXT("OffsetYaw %f"), MovementOffsetYaw));
+	
 		
 	}
 }
@@ -37,6 +47,6 @@ void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 void UShooterAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
-	ShooterCharacter = Cast<AShooterCharacter>(TryGetPawnOwner());
+	ShooterCharacter = Cast<ACharacter>(TryGetPawnOwner());
 	
 }

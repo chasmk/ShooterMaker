@@ -26,7 +26,7 @@ public:
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Moement, meta = (AllowPrivateAccess = "true"))
-	class AShooterCharacter* ShooterCharacter;
+	class ACharacter* ShooterCharacter;
 
 	//角色当前速度
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Movement, meta = (AllowPrivateAccess = "true"))
@@ -40,6 +40,10 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Movement, meta = (AllowPrivateAccess = "true"))
 	bool bIsAccelerating;
 
+	//Yaw Offset, 用于制作Strafe
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement, meta = (AllowPrivateAccess = "true"))
+	float MovementOffsetYaw;
 
+public:
 	
 };

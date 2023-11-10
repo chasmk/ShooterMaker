@@ -235,3 +235,23 @@ GetCharacterMovement()->JumpZVelocity = 600.f;
 GetCharacterMovement()->AirControl = 0.2f;//[0, 1]在空中时输入的影响
 ```
 
+
+
+## 4 粒子特效
+
+包括开枪时枪口火花，子弹轨迹的smoke，命中时的flash
+
+
+
+## 5 子弹轨迹计算
+
+我们在屏幕中间绘制应该十字准星Crosshair，每次开枪时，子弹的飞行轨迹是**从枪口到准星瞄准的第一个物体**，因此我们需要对此进行计算
+
+0. 把trace的起点终点定义为Start和End
+
+1. 先获取Screen的中心位置，然后使用`UGameplayStatics::DeprojectScreenToWorld`将准星位置从屏幕**反投影**到3d空间中(即相机的Location和Direction)
+2. 用准星的Location和Direction做trace，把end**更新**为第一个Hit到的位置
+3. 此时从枪口位置到end做trace时仍然可能有物体遮挡，所以如果Hit到物体，需要再次**更新**End，此时的End就是子弹轨迹和最终命中位置了！！
+4. 示意图如下所示，其中绿色线是**第二次trace**，其终点为camera的forward方向的Hit位置。若它有BlockingHit，那么就更新最终trace的Hit位置，更新后结果为蓝色线。
+
+![两次trace示意图](./imgs/ShootTrace.png)
