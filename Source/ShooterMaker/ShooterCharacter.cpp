@@ -15,7 +15,19 @@
 
 AShooterCharacter::AShooterCharacter() :
 	BaseTurnRate(45.f),
-	BaseLookUpRate(45.f)
+	BaseLookUpRate(45.f),
+	// 正常/瞄准时的 Turn Rates
+	HipTurnRate(45.f),
+	HipLookUpRate(45.f),
+	AimingTurnRate(20.f),
+	AimingLookUpRate(20.f),
+	bAiming(false),
+	//相机FOV
+	CameraDefaultFOV(0.f), // 在begin play中再初始化
+	CameraZoomedFOV(40.f),
+	CameraCurrentFOV(0.f),
+	ZoomInterpSpeed(18),
+	ZoomTimerInterval(0.01)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -25,7 +37,7 @@ AShooterCharacter::AShooterCharacter() :
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.f; //长度
 	CameraBoom->bUsePawnControlRotation = true; //弹簧臂跟随controller旋转
-	CameraBoom->SocketOffset = FVector(0.f, 90.f, 50.f);
+	CameraBoom->SocketOffset = FVector(0.f, 90.f, 65.f);
 
 	//相机初始化
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera222"));
@@ -48,13 +60,21 @@ AShooterCharacter::AShooterCharacter() :
 void AShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	FString str = GetName(); //GetFullName();
-	UE_LOG(LogTemp, Warning, TEXT("name: %s"), *str);
+
+	if (GetFollowCamera())
+	{
+		CameraDefaultFOV = GetFollowCamera()->FieldOfView;
+		CameraCurrentFOV = CameraDefaultFOV;
+	}
+
+	BaseTurnRate = HipTurnRate;
+	BaseLookUpRate = HipLookUpRate;
 }
 
 void AShooterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	/* Yaw Offset调试
 	GEngine->AddOnScreenDebugMessage(
 		1,
 		0.f,
@@ -70,8 +90,18 @@ void AShooterCharacter::Tick(float DeltaTime)
 		0.f,
 		FColor::Red,
 		FString::Printf(TEXT("VelocityRotation %f"), GetVelocity().Rotation().Yaw));
-	
+*/
 
+	GEngine->AddOnScreenDebugMessage(
+		1,
+		0.f,
+		FColor::Blue,
+		FString::Printf(TEXT("BaseTurnRate %f"), BaseTurnRate));
+	GEngine->AddOnScreenDebugMessage(
+		2,
+		0.f,
+		FColor::Green,
+		FString::Printf(TEXT("BaseLookUpRate %f"), BaseLookUpRate));
 }
 
 void AShooterCharacter::MoveForward(float Value)
@@ -119,20 +149,20 @@ void AShooterCharacter::FireWeapon()
 	// 		false
 	// 	);
 	// }
-	
+
 	//开枪声音
 	if (FireSound)
 	{
 		UGameplayStatics::PlaySound2D(GetWorld(), FireSound);
 	}
-	
+
 	//播放开枪动画
 	if (FireMontage)
 	{
 		GetMesh()->GetAnimInstance()->Montage_Play(FireMontage);
 		GetMesh()->GetAnimInstance()->Montage_JumpToSection(FName("StartFire"));
 	}
-	
+
 	//获取枪口socket，接下来做烟雾trace和Hit特效
 	const USkeletalMeshSocket* BarrelSocket = GetMesh()->GetSocketByName("BarrelSocket");
 	if (BarrelSocket)
@@ -165,13 +195,13 @@ void AShooterCharacter::FireWeapon()
 			//生成命中物体时的特效
 			if (bIsHit)
 			{
-				End = HitResult.Location;//更新trace终点
+				End = HitResult.Location; //更新trace终点
 				if (ImpactParticle)
 				{
 					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticle, HitResult.Location);
 				}
 			}
-			
+
 			//生成子弹轨迹烟雾
 			if (BeamParticle)
 			{
@@ -232,7 +262,65 @@ bool AShooterCharacter::GetDesiredTraceLocation(const FVector& Start, FVector& E
 	}
 }
 
-// Called every frame
+void AShooterCharacter::AimingButtonPressed()
+{
+	bAiming = true;
+
+	BaseTurnRate = AimingTurnRate;
+	BaseLookUpRate = AimingLookUpRate;
+	
+	GetWorldTimerManager().SetTimer(FOVTimer, this, &AShooterCharacter::UpdateFOV, ZoomTimerInterval, true, -1.f);
+}
+
+void AShooterCharacter::AimingButtonReleased()
+{
+	bAiming = false;
+
+	BaseTurnRate = HipTurnRate;
+	BaseLookUpRate = HipLookUpRate;
+	
+	GetWorldTimerManager().SetTimer(FOVTimer, this, &AShooterCharacter::UpdateFOV, ZoomTimerInterval, true, -1.f);
+}
+
+void AShooterCharacter::UpdateFOV()
+{
+	if (bAiming)
+	{
+		if (CameraCurrentFOV <= CameraZoomedFOV)
+		{
+			GetWorldTimerManager().ClearTimer(FOVTimer);
+		}
+		else
+		{
+			CameraCurrentFOV = FMath::FInterpTo(
+				CameraCurrentFOV,
+				CameraZoomedFOV,
+				ZoomTimerInterval, //UGameplayStatics::GetWorldDeltaSeconds(GetWorld()),
+				ZoomInterpSpeed
+			);
+			//CameraCurrentFOV -= ZoomInterpSpeed;
+			GetFollowCamera()->SetFieldOfView(CameraCurrentFOV);
+		}
+	}
+	else
+	{
+		if (CameraCurrentFOV >= CameraDefaultFOV)
+		{
+			GetWorldTimerManager().ClearTimer(FOVTimer);
+		}
+		else
+		{
+			CameraCurrentFOV = FMath::FInterpTo(
+				CameraCurrentFOV,
+				CameraDefaultFOV,
+				ZoomTimerInterval,
+				ZoomInterpSpeed
+			);
+			//CameraCurrentFOV += ZoomInterpSpeed;
+			GetFollowCamera()->SetFieldOfView(CameraCurrentFOV);
+		}
+	}
+}
 
 // Called to bind functionality to input
 void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -246,14 +334,16 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AShooterCharacter::LookUpAtRate);
 
 	//使用恒定速率
-	// PlayerInputComponent->BindAxis("Turn", this, &AShooterCharacter::TurnAtRate);
-	// PlayerInputComponent->BindAxis("LookUp", this, &AShooterCharacter::LookUpAtRate);
+	PlayerInputComponent->BindAxis("Turn", this, &AShooterCharacter::TurnAtRate);
+	PlayerInputComponent->BindAxis("LookUp", this, &AShooterCharacter::LookUpAtRate);
 	//使用鼠标速率
-	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
-	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+	//PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+	//PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	// PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
 	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AShooterCharacter::FireWeapon);
+	PlayerInputComponent->BindAction("AimingButton", IE_Pressed, this, &AShooterCharacter::AimingButtonPressed);
+	PlayerInputComponent->BindAction("AimingButton", IE_Released, this, &AShooterCharacter::AimingButtonReleased);
 }

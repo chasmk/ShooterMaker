@@ -26,7 +26,7 @@ public:
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Moement, meta = (AllowPrivateAccess = "true"))
-	class ACharacter* ShooterCharacter;
+	class AShooterCharacter* ShooterCharacter;
 
 	//角色当前速度
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Movement, meta = (AllowPrivateAccess = "true"))
@@ -47,6 +47,9 @@ private:
 	//保存上一帧的Yaw Offset, 用于制作jog stop，在速度为0时停止更新，否则jog stop总是fwd的
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement, meta = (AllowPrivateAccess = "true"))
 	float LastMovementOffsetYaw;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Movement, meta = (AllowPrivateAccess = "true"))
+	bool bAiming;
 
 public:
 	

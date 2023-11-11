@@ -255,3 +255,29 @@ GetCharacterMovement()->AirControl = 0.2f;//[0, 1]在空中时输入的影响
 4. 示意图如下所示，其中绿色线是**第二次trace**，其终点为camera的forward方向的Hit位置。若它有BlockingHit，那么就更新最终trace的Hit位置，更新后结果为蓝色线。
 
 ![两次trace示意图](./imgs/ShootTrace.png)
+
+## 6 Aiming
+
+### 6.1 FOV缩放
+
+每次瞄准时缩小FOV，松开按键恢复。
+
+可以在tick函数里实现，这里我使用Timer实现，维护一个变量`CameraCurrentFOV`记录当前的FOV值
+
+- 按下瞄准键时创建Timer
+
+  - ```c++
+    GetWorldTimerManager().SetTimer(FOVTimer, this, &AShooterCharacter::UpdateFOV, ZoomTimerInterval, true, -1.f);
+    ```
+
+- 然后不断更新FOV值直到达到预先设定的值
+
+  - ```c++
+    GetFollowCamera()->SetFieldOfView(CameraCurrentFOV);
+    ```
+
+- 这里使用`FMath::FInterpTo`方法做插值，这个插值更新速度和AB的距离成反比，所以最终效果是开始很快，然后慢慢结束，和我们瞄准的体感很接近
+
+### 6.2 鼠标灵敏度
+
+瞄准时更新`BaseTurnRate`和`BaseLookUpRate`即可

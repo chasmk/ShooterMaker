@@ -2,7 +2,7 @@
 
 
 #include "ShooterAnimInstance.h"
-#include "GameFramework/Character.h"
+#include "ShooterCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -13,7 +13,7 @@ void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	
 	if (ShooterCharacter == nullptr)
 	{
-		ShooterCharacter = Cast<ACharacter>(TryGetPawnOwner());
+		ShooterCharacter = Cast<AShooterCharacter>(TryGetPawnOwner());
 	}
 	if(ShooterCharacter)
 	{
@@ -46,8 +46,8 @@ void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 				0.f,
 				FColor::Orange,
 				FString::Printf(TEXT("OffsetYaw %f"), MovementOffsetYaw));
-	
-		
+
+		bAiming = ShooterCharacter->GetAiming();
 	}
 }
 
@@ -55,6 +55,6 @@ void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 void UShooterAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
-	ShooterCharacter = Cast<ACharacter>(TryGetPawnOwner());
+	ShooterCharacter = Cast<AShooterCharacter>(TryGetPawnOwner());
 	
 }

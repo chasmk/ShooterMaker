@@ -154,3 +154,8 @@ if(ShooterCharacter)
 
 节点中设置骨骼名为spine_01, 深度设置>=0即可。
 
+## 5 Aiming
+
+添加状态机，维护变量`bAiming`用于正常和瞄准状态间转换。
+
+Aiming状态就是一个单帧pose和Locomotion做Layered Blend。另外调整节点中的Blend Weight就能实现瞄准时开枪也有轻微动画
