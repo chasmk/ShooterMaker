@@ -23,9 +23,9 @@ AShooterCharacter::AShooterCharacter() :
 	//弹簧臂初始化
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 300.f; //长度
+	CameraBoom->TargetArmLength = 400.f; //长度
 	CameraBoom->bUsePawnControlRotation = true; //弹簧臂跟随controller旋转
-	CameraBoom->SocketOffset = FVector(0.f, 60.f, 50.f);
+	CameraBoom->SocketOffset = FVector(0.f, 90.f, 50.f);
 
 	//相机初始化
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera222"));
@@ -34,7 +34,7 @@ AShooterCharacter::AShooterCharacter() :
 
 	//角色不跟随controller(鼠标)旋转，controller只影响camera
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false; //true: 左右旋转跟随鼠标转
+	bUseControllerRotationYaw = true; //true: 左右旋转跟随鼠标转
 	bUseControllerRotationRoll = false;
 
 

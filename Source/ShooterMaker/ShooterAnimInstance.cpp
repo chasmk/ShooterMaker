@@ -29,10 +29,18 @@ void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bIsAccelerating =
 			ShooterCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f ? true : false;
 
+		//获取角色和相机的角度offset
 		FRotator AimRotaion = ShooterCharacter->GetBaseAimRotation();//跟随相机旋转改变值
 		FRotator MovementRotation = ShooterCharacter->GetVelocity().Rotation();//跟随输入方向改变值
 			//UKismetMathLibrary::MakeRotFromX(ShooterCharacter->GetVelocity())两个效果好像一样
-		MovementOffsetYaw = UKismetMathLibrary::NormalizedDeltaRotator(AimRotaion, MovementRotation).Yaw;
+		MovementOffsetYaw = UKismetMathLibrary::NormalizedDeltaRotator(MovementRotation, AimRotaion).Yaw;
+
+		if (bIsAccelerating)
+		{
+			LastMovementOffsetYaw = MovementOffsetYaw;
+		}
+
+		
 		GEngine->AddOnScreenDebugMessage(
 				4,
 				0.f,

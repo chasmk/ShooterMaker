@@ -110,7 +110,43 @@ if(ShooterCharacter)
 
 ![](.\imgs\Locomotion.png)
 
-## 添加开枪动画
+## 3 混合空间 BS
+
+### 3.1 使用Yaw Offset混合动画
+
+我们希望角色根据Aim和Movement方向的Offset来播放不同的动画，比如按D时播放向右跑动画，按S时播放向后跑动画。
+
+因此我们需要创建三个Blend Space，对应JogStart，Run(2D)，JogEnd三种状态。
+
+- 首先在C++中计算YawOffset的值，再从蓝图里获取
+
+  - 第一步获取两个Rotation值
+
+    - ```c++
+      //获取角色和相机的角度offset
+      FRotator AimRotaion = ShooterCharacter->GetBaseAimRotation();//跟随相机旋转改变值
+      FRotator MovementRotation = ShooterCharacter->GetVelocity().Rotation();//跟随输入方向改变值
+      ```
+
+  - 再计算Offset
+
+    - ```c++
+      MovementOffsetYaw = UKismetMathLibrary::NormalizedDeltaRotator(MovementRotation, AimRotaion).Yaw;
+      ```
+
+- 在编辑器里创建BS1D，坐标轴使用YawOffset: [-180, 180]；使用jog_Fwd/Bwd/Left/Right动画，示意图如下：
+
+  - 注意设置左上角**Interpolation Time**可以在在BS内的不同动画间平滑过渡，避免抽搐
+
+![](./imgs/jogBS.png)
+
+- 最后在ABP中应用即可![](./imgs/jogBS1.png)
+  - ！注意JogStop的特殊处理，由于YawOffset计算需要Velocity的值，当角色停下时，Velocity总会归零，所以此时YawOffset总为0，因此播放的总是Jog_Fwd_Stop动画。要解决这个问题需要我们**记录前一帧的YawOffset**，并在Velocity为0/bIsAccelerate为false时停止更新，此时JogStop可以正常运行。
+
+- 此外就是trim动画，使其更自然
+- 如果想实现JogStop时角色还能轻微滑动，可以在角色类的MovementComponent里Walking类别下设置Ground Friction = 2，Braking Deceleration Walking = 80即可
+
+## 4 添加开枪动画
 
 想要的效果：上半身开枪，下半身跑步。
 

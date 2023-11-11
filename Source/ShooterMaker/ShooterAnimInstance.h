@@ -44,6 +44,10 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement, meta = (AllowPrivateAccess = "true"))
 	float MovementOffsetYaw;
 
+	//保存上一帧的Yaw Offset, 用于制作jog stop，在速度为0时停止更新，否则jog stop总是fwd的
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement, meta = (AllowPrivateAccess = "true"))
+	float LastMovementOffsetYaw;
+
 public:
 	
 };
