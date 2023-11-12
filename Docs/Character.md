@@ -281,3 +281,57 @@ GetCharacterMovement()->AirControl = 0.2f;//[0, 1]在空中时输入的影响
 ### 6.2 鼠标灵敏度
 
 瞄准时更新`BaseTurnRate`和`BaseLookUpRate`即可
+
+### 6.3  准心缩放
+
+这部分想实现的效果是当我们奔跑/跳跃/瞄准/射击时，准心相应地**发散和聚焦**。
+
+- 首先我们要把原来一整个的准心贴图改成**四个方向**的贴图，再分别DrawTexture
+
+- 在角色类定义`CrosshairSpreadMultiplier`该值**每帧更新**，计算此时Crosshair的偏移量。HUD类每次更新时读取该值并应用在Texture的位置上。下面介绍四种准心更新的方法：
+
+  - `VelocityFactor`：根据当前速度缩放
+
+    - ```c++
+      CrosshairVelocityFactor = FMath::GetMappedRangeValueClamped(//把当前速度map到[0,1]
+      		WalkSpeedRange,//[0,MaxWalkSpeed]
+      		VelocityMulRange,//[0,1]
+      		GetVelocity().Size2D());
+      ```
+
+  - `InAirFactor`：在空中时发散，落地后恢复
+
+    - ```c++
+      if (GetCharacterMovement()->IsFalling())//这里更新两种方式都行
+      {
+          CrosshairInAirFactor = FMath::FInterpTo(CrosshairInAirFactor, 1.f, DeltaTime, 2.5);
+      }
+      else
+      {
+          float Delta = CrosshairInAirFactor - 0.08f;
+          CrosshairInAirFactor = FMath::Clamp(Delta, 0.f, 1.f);
+      }
+      ```
+
+  - `AimFactor`：瞄准时聚焦，取消后恢复，实现方法和air类似
+
+  - `ShootingFactor`：开一枪后准心轻微放大，然后迅速缩小。
+
+    - 实现方法是设置一个bool `bFiringBullet`，每次开枪后开启一个Timer将其设为true，call back函数再设为false。然后更新过程和air也类似。
+
+  - 最终的`CrosshairSpreadMultiplier`更新如下：
+
+    - ```c++
+      	//计算最终的Delta值，HUD类会读取
+      	CrosshairSpreadMultiplier = 0.5f //设置一个基础的delta值
+      		+ CrosshairVelocityFactor
+      		+ CrosshairInAirFactor
+      		+ CrosshairAimFactor
+      		+ CrosshairShootingFactor;
+      ```
+
+- 在HUD类更新时，根据Top/Bottom/Left/Right将Multiplier应用到X/Y方向上即可。
+
+## 7 自动开火
+
+给鼠标左键的IE_Pressed和IE_Released各绑定一个函数，然后使用Timer不断触发FireWeapon函数即可。

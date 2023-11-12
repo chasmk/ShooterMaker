@@ -29,12 +29,20 @@ protected:
 	void LookUpAtRate(float Rate); //Rate 介于0-1之间
 
 	void FireWeapon(); //按下鼠标左键时触发
+	void FireCallBack();//FireTimer的call back
+	void FireWeaponPressed(); //按下鼠标左键时触发
+	void FireWeaponReleased();
 	bool GetDesiredTraceLocation(const FVector& Start, FVector& End); //获取真实的trace轨迹
 
 	// 瞄准时设置bAiming
 	void AimingButtonPressed();
 	void AimingButtonReleased();
 	void UpdateFOV();
+
+	void CalculateCrosshairSpread(float DeltaTime);//计算准心实时偏移量
+
+	void StartCrosshairBulletFire();//开启射击时timer
+	void FinishCrosshairBulletFire();//射击时timer的call back
 
 private:
 	/**
@@ -49,13 +57,17 @@ private:
 	float BaseTurnRate; //单位是 度/秒
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	float BaseLookUpRate; //单位是 度/秒，
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, meta = (AllowPrivateAccess = "true"), meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, meta = (AllowPrivateAccess = "true"),
+		meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
 	float HipTurnRate;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, meta = (AllowPrivateAccess = "true"), meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, meta = (AllowPrivateAccess = "true"),
+		meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
 	float HipLookUpRate;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, meta = (AllowPrivateAccess = "true"), meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, meta = (AllowPrivateAccess = "true"),
+		meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
 	float AimingTurnRate;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, meta = (AllowPrivateAccess = "true"), meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, meta = (AllowPrivateAccess = "true"),
+		meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
 	float AimingLookUpRate;
 
 	/**
@@ -76,9 +88,36 @@ private:
 	float ZoomTimerInterval;
 
 	/**
-	 * 开枪相关变量
+	 * 十字准心相关
 	 */
 
+	//决定准心放大
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshairs, meta = (AllowPrivateAccess = true))
+	float CrosshairSpreadMultiplier;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshairs, meta = (AllowPrivateAccess = true))
+	float CrosshairVelocityFactor;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshairs, meta = (AllowPrivateAccess = true))
+	float CrosshairInAirFactor;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshairs, meta = (AllowPrivateAccess = true))
+	float CrosshairAimFactor;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshairs, meta = (AllowPrivateAccess = true))
+	float CrosshairShootingFactor;
+
+	float ShootTimeDuration;
+	bool bFiringBullet;
+	FTimerHandle CrosshairShootTimer;
+
+	/**
+	 * 开枪相关变量
+	 */
+	
+	FTimerHandle FireTimer;
+	
+	
 	//随机的子弹声
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Combat, meta = (AllowPrivateAccess = "true"))
 	class USoundCue* FireSound;
@@ -103,4 +142,6 @@ public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	FORCEINLINE bool GetAiming() const { return bAiming; }
+	UFUNCTION(BlueprintCallable)
+	float GetCrosshairSpreadMultiplier() const { return CrosshairSpreadMultiplier; }
 };

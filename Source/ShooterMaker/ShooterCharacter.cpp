@@ -27,7 +27,16 @@ AShooterCharacter::AShooterCharacter() :
 	CameraZoomedFOV(40.f),
 	CameraCurrentFOV(0.f),
 	ZoomInterpSpeed(18),
-	ZoomTimerInterval(0.01)
+	ZoomTimerInterval(0.01),
+	//准心放缩factor
+	CrosshairSpreadMultiplier(0.f),
+	CrosshairVelocityFactor(0.f),
+	CrosshairInAirFactor(0.f),
+	CrosshairAimFactor(0.f),
+	CrosshairShootingFactor(0.f),
+	//准心缩放 shoot
+	ShootTimeDuration(0.05f),
+	bFiringBullet(false)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -37,7 +46,7 @@ AShooterCharacter::AShooterCharacter() :
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.f; //长度
 	CameraBoom->bUsePawnControlRotation = true; //弹簧臂跟随controller旋转
-	CameraBoom->SocketOffset = FVector(0.f, 90.f, 65.f);
+	CameraBoom->SocketOffset = FVector(0.f, 120.f, 70.f);
 
 	//相机初始化
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera222"));
@@ -92,16 +101,7 @@ void AShooterCharacter::Tick(float DeltaTime)
 		FString::Printf(TEXT("VelocityRotation %f"), GetVelocity().Rotation().Yaw));
 */
 
-	GEngine->AddOnScreenDebugMessage(
-		1,
-		0.f,
-		FColor::Blue,
-		FString::Printf(TEXT("BaseTurnRate %f"), BaseTurnRate));
-	GEngine->AddOnScreenDebugMessage(
-		2,
-		0.f,
-		FColor::Green,
-		FString::Printf(TEXT("BaseLookUpRate %f"), BaseLookUpRate));
+	CalculateCrosshairSpread(DeltaTime);
 }
 
 void AShooterCharacter::MoveForward(float Value)
@@ -149,7 +149,7 @@ void AShooterCharacter::FireWeapon()
 	// 		false
 	// 	);
 	// }
-
+	
 	//开枪声音
 	if (FireSound)
 	{
@@ -214,6 +214,26 @@ void AShooterCharacter::FireWeapon()
 			}
 		}
 	}
+
+	//用于准心放缩
+	StartCrosshairBulletFire();
+}
+
+void AShooterCharacter::FireCallBack()
+{
+	FireWeapon();
+}
+
+void AShooterCharacter::FireWeaponPressed()
+{
+	FireWeapon();
+	float FireInterval = 0.125f;
+	GetWorldTimerManager().SetTimer(FireTimer, this, &AShooterCharacter::FireCallBack, FireInterval, true, FireInterval);
+}
+
+void AShooterCharacter::FireWeaponReleased()
+{
+	GetWorldTimerManager().ClearTimer(FireTimer);
 }
 
 bool AShooterCharacter::GetDesiredTraceLocation(const FVector& Start, FVector& End)
@@ -225,7 +245,7 @@ bool AShooterCharacter::GetDesiredTraceLocation(const FVector& Start, FVector& E
 		GEngine->GameViewport->GetViewportSize(ViewportSize);
 
 		FVector2D CrosshairLocation = FVector2D(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
-		CrosshairLocation.Y -= 28.f;
+		//CrosshairLocation.Y -= 28.f;
 
 		//把十字准星从屏幕投影到3d空间(即相机的位置)
 		FVector CrosshairWorldLocation;
@@ -268,7 +288,7 @@ void AShooterCharacter::AimingButtonPressed()
 
 	BaseTurnRate = AimingTurnRate;
 	BaseLookUpRate = AimingLookUpRate;
-	
+
 	GetWorldTimerManager().SetTimer(FOVTimer, this, &AShooterCharacter::UpdateFOV, ZoomTimerInterval, true, -1.f);
 }
 
@@ -278,7 +298,7 @@ void AShooterCharacter::AimingButtonReleased()
 
 	BaseTurnRate = HipTurnRate;
 	BaseLookUpRate = HipLookUpRate;
-	
+
 	GetWorldTimerManager().SetTimer(FOVTimer, this, &AShooterCharacter::UpdateFOV, ZoomTimerInterval, true, -1.f);
 }
 
@@ -322,6 +342,77 @@ void AShooterCharacter::UpdateFOV()
 	}
 }
 
+void AShooterCharacter::CalculateCrosshairSpread(float DeltaTime)
+{
+	//计算Velocity Factor
+	FVector2D WalkSpeedRange = {0.f, GetCharacterMovement()->MaxWalkSpeed};
+	FVector2D VelocityMulRange = {0.f, 1.f};
+	CrosshairVelocityFactor = FMath::GetMappedRangeValueClamped( //把当前速度map到[0,1]
+		WalkSpeedRange,
+		VelocityMulRange,
+		GetVelocity().Size2D());
+
+	//计算air factor
+	if (GetCharacterMovement()->IsFalling())
+	{
+		float Delta = CrosshairInAirFactor + 0.01f;
+		CrosshairInAirFactor = FMath::FInterpTo(CrosshairInAirFactor, 1.f, DeltaTime, 2.5);
+	}
+	else
+	{
+		float Delta = CrosshairInAirFactor - 0.08f;
+		CrosshairInAirFactor = FMath::Clamp(Delta, 0.f, 1.f);
+	}
+
+	//计算aim factor
+	if (bAiming)
+	{
+		float Delta = CrosshairAimFactor - 0.01f;
+		CrosshairAimFactor = FMath::FInterpTo(CrosshairAimFactor, -0.8f, DeltaTime, 10);
+	}
+	else
+	{
+		float Delta = CrosshairAimFactor + 0.08f;
+		CrosshairAimFactor = FMath::Clamp(Delta, -1.f, 0.f);
+	}
+
+	//计算shoot factor
+	if (bFiringBullet)
+	{
+		float Delta = CrosshairShootingFactor + 0.01f;
+		CrosshairShootingFactor = FMath::FInterpTo(CrosshairShootingFactor, 0.5f, DeltaTime, 50);
+	}
+	else
+	{
+		float Delta = CrosshairShootingFactor - 0.08f;
+		CrosshairShootingFactor = FMath::Clamp(Delta, 0.f, 1.f);
+	}
+
+	//计算最终的Delta值，HUD类会读取
+	CrosshairSpreadMultiplier = 0.5f
+		+ CrosshairVelocityFactor
+		+ CrosshairInAirFactor
+		+ CrosshairAimFactor
+		+ CrosshairShootingFactor;
+}
+
+void AShooterCharacter::StartCrosshairBulletFire()
+{
+	bFiringBullet = true;
+	GetWorldTimerManager().SetTimer(
+		CrosshairShootTimer,
+		this,
+		&AShooterCharacter::FinishCrosshairBulletFire,
+		ShootTimeDuration,
+		false,
+		0.f);
+}
+
+void AShooterCharacter::FinishCrosshairBulletFire()
+{
+	bFiringBullet = false;
+}
+
 // Called to bind functionality to input
 void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -343,7 +434,8 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	// PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
-	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AShooterCharacter::FireWeapon);
+	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AShooterCharacter::FireWeaponPressed);
+	PlayerInputComponent->BindAction("FireButton", IE_Released, this, &AShooterCharacter::FireWeaponReleased);
 	PlayerInputComponent->BindAction("AimingButton", IE_Pressed, this, &AShooterCharacter::AimingButtonPressed);
 	PlayerInputComponent->BindAction("AimingButton", IE_Released, this, &AShooterCharacter::AimingButtonReleased);
 }

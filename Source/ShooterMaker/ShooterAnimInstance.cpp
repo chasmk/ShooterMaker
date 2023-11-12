@@ -41,11 +41,11 @@ void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		}
 
 		
-		GEngine->AddOnScreenDebugMessage(
-				4,
-				0.f,
-				FColor::Orange,
-				FString::Printf(TEXT("OffsetYaw %f"), MovementOffsetYaw));
+		// GEngine->AddOnScreenDebugMessage(
+		// 		4,
+		// 		0.f,
+		// 		FColor::Orange,
+		// 		FString::Printf(TEXT("OffsetYaw %f"), MovementOffsetYaw));
 
 		bAiming = ShooterCharacter->GetAiming();
 	}
