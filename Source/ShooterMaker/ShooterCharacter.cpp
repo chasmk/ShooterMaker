@@ -4,6 +4,7 @@
 #include "ShooterCharacter.h"
 
 #include "DrawDebugHelpers.h"
+#include "Item.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -78,6 +79,14 @@ void AShooterCharacter::BeginPlay()
 
 	BaseTurnRate = HipTurnRate;
 	BaseLookUpRate = HipLookUpRate;
+
+	//设置trace Item的timer
+	GetWorldTimerManager().SetTimer(
+		ItemTraceTimer,
+		this,
+		&AShooterCharacter::TraceItem,
+		0.1f,
+		true);
 }
 
 void AShooterCharacter::Tick(float DeltaTime)
@@ -139,17 +148,17 @@ void AShooterCharacter::LookUpAtRate(float Rate)
 
 void AShooterCharacter::FireWeapon()
 {
-	// if (GEngine)
-	// {
-	// 	GEngine->AddOnScreenDebugMessage(
-	// 		3,
-	// 		0.15f,
-	// 		FColor::Red,
-	// 		FString("Fire111"),
-	// 		false
-	// 	);
-	// }
-	
+	/*if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			3,
+			0.15f,
+			FColor::Red,
+			FString("Fire111"),
+			false
+		);
+	}*/
+
 	//开枪声音
 	if (FireSound)
 	{
@@ -178,13 +187,13 @@ void AShooterCharacter::FireWeapon()
 		FVector Start = SocketTransform.GetLocation();
 		FVector End;
 
+		FHitResult HitResult;
 		//根据trace情况获取轨迹位置
-		if (GetDesiredTraceLocation(Start, End) == true)
+		if (GetCrosshairTraceResult(HitResult, End, 50'000.f) == true)
 		{
-			FHitResult HitResult;
-
 			//DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 10.f, 0, 5.f);
 
+			//第二次trace
 			bool bIsHit = GetWorld()->LineTraceSingleByChannel(
 				HitResult,
 				Start,
@@ -192,14 +201,15 @@ void AShooterCharacter::FireWeapon()
 				ECC_Visibility
 			);
 
-			//生成命中物体时的特效
 			if (bIsHit)
+			{//第二次更新命中位置
+				End = HitResult.Location;
+			}
+			
+			//生成命中物体时的特效
+			if (ImpactParticle)
 			{
-				End = HitResult.Location; //更新trace终点
-				if (ImpactParticle)
-				{
-					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticle, HitResult.Location);
-				}
+				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticle, End);
 			}
 
 			//生成子弹轨迹烟雾
@@ -228,7 +238,8 @@ void AShooterCharacter::FireWeaponPressed()
 {
 	FireWeapon();
 	float FireInterval = 0.125f;
-	GetWorldTimerManager().SetTimer(FireTimer, this, &AShooterCharacter::FireCallBack, FireInterval, true, FireInterval);
+	GetWorldTimerManager().SetTimer(FireTimer, this, &AShooterCharacter::FireCallBack, FireInterval, true,
+	                                FireInterval);
 }
 
 void AShooterCharacter::FireWeaponReleased()
@@ -236,7 +247,7 @@ void AShooterCharacter::FireWeaponReleased()
 	GetWorldTimerManager().ClearTimer(FireTimer);
 }
 
-bool AShooterCharacter::GetDesiredTraceLocation(const FVector& Start, FVector& End)
+bool AShooterCharacter::GetCrosshairTraceResult(FHitResult& OutHitResult, FVector& End, float TraceDistance)
 {
 	//获取屏幕上十字准心位置
 	if (GEngine && GEngine->GameViewport)
@@ -257,22 +268,25 @@ bool AShooterCharacter::GetDesiredTraceLocation(const FVector& Start, FVector& E
 			CrosshairWorldDirection
 		);
 
-		//子弹轨迹end位置
-		End = CrosshairWorldLocation + CrosshairWorldDirection * 50'000.f;
-
-		//若十字准星发射的line能命中目标，则更新End的位置
-		FHitResult CrosshairHitResult;
-		bool bIsCrosshairHit = GetWorld()->LineTraceSingleByChannel(
-			CrosshairHitResult,
-			CrosshairWorldLocation,
-			End,
-			ECC_Visibility
-		);
-
-		if (bIsCrosshairHit)
+		if (bScreenToWorld)
 		{
-			//更新子弹轨迹end位置
-			End = CrosshairHitResult.Location;
+			//trace轨迹end位置
+			End = CrosshairWorldLocation + CrosshairWorldDirection * TraceDistance;
+
+			//若十字准星发射的line能命中目标，则更新End的位置
+			bool bIsCrosshairHit = GetWorld()->LineTraceSingleByChannel(
+				OutHitResult,
+				CrosshairWorldLocation,
+				End,
+				ECC_Visibility
+			);
+
+			if (bIsCrosshairHit)
+			{
+				//更新子弹轨迹end位置
+				End = OutHitResult.Location;
+			}
+			return bIsCrosshairHit;
 		}
 		return bScreenToWorld;
 	}
@@ -411,6 +425,52 @@ void AShooterCharacter::StartCrosshairBulletFire()
 void AShooterCharacter::FinishCrosshairBulletFire()
 {
 	bFiringBullet = false;
+}
+
+void AShooterCharacter::TraceItem()
+{
+	UKismetSystemLibrary::Delay(GetWorld(), 0.2f, FLatentActionInfo());
+	FHitResult ItemTraceResult;
+	AItem* HitItem = nullptr;
+	FVector tmp;//充数用
+	if (GetCrosshairTraceResult(ItemTraceResult, tmp, 900.f))
+	{
+		/*GEngine->AddOnScreenDebugMessage(
+			0,
+			0.f,
+			FColor::Blue,
+			FString::Printf(TEXT("111")));*/
+		
+		HitItem = Cast<AItem>(ItemTraceResult.GetActor());
+		if (HitItem)
+		{
+			LastTraceItem = HitItem;
+			HitItem->SetPickupWidgetVisibility(true);
+			bool bIsTraced;
+			TraceItems.Add(HitItem, &bIsTraced);
+			if(!bIsTraced && TraceItems.Num() > 1)
+			{//第一次追踪该item，其它item都设置为不可见
+				for(AItem* i : TraceItems)
+				{
+					if (i != HitItem)
+					{
+						i->SetPickupWidgetVisibility(false);
+						//TraceItems.Remove(i);
+					}
+				}
+				TraceItems.Reset();
+				TraceItems.Add(HitItem);
+			}
+		}
+		else if (LastTraceItem)
+		{
+			LastTraceItem->SetPickupWidgetVisibility(false);
+		}
+	}
+	else if (LastTraceItem)
+	{
+		LastTraceItem->SetPickupWidgetVisibility(false);
+	}
 }
 
 // Called to bind functionality to input

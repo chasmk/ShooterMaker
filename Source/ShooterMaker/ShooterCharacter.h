@@ -32,17 +32,21 @@ protected:
 	void FireCallBack();//FireTimer的call back
 	void FireWeaponPressed(); //按下鼠标左键时触发
 	void FireWeaponReleased();
-	bool GetDesiredTraceLocation(const FVector& Start, FVector& End); //获取真实的trace轨迹
 
+	//获取准心的trace结果的trace轨迹
+	bool GetCrosshairTraceResult(FHitResult& OutHitResult, FVector& End, float TraceDistance); 
+	
 	// 瞄准时设置bAiming
 	void AimingButtonPressed();
 	void AimingButtonReleased();
 	void UpdateFOV();
-
 	void CalculateCrosshairSpread(float DeltaTime);//计算准心实时偏移量
-
 	void StartCrosshairBulletFire();//开启射击时timer
 	void FinishCrosshairBulletFire();//射击时timer的call back
+
+	
+	//从准心出发trace item
+	void TraceItem();
 
 private:
 	/**
@@ -111,12 +115,15 @@ private:
 	bool bFiringBullet;
 	FTimerHandle CrosshairShootTimer;
 
+	FTimerHandle ItemTraceTimer;
+	class AItem* LastTraceItem;
+	TSet<AItem*> TraceItems;
+
 	/**
 	 * 开枪相关变量
 	 */
 	
 	FTimerHandle FireTimer;
-	
 	
 	//随机的子弹声
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Combat, meta = (AllowPrivateAccess = "true"))

@@ -335,3 +335,20 @@ GetCharacterMovement()->AirControl = 0.2f;//[0, 1]在空中时输入的影响
 ## 7 自动开火
 
 给鼠标左键的IE_Pressed和IE_Released各绑定一个函数，然后使用Timer不断触发FireWeapon函数即可。
+
+## 8 显示武器拾取提示
+
+使用Timer/Tick函数，**从Crosshair开始做line trace**，把trace到的actor cast成AItem，然后设置widget的visibility即可。
+
+- 由于line trace的channel是ECC_Visibility, 为了能让line trace到武器box，需要如下设置
+
+  - ```c++
+    CollisionBox->SetCollisionResponseToAllChannels(ECR_Ignore);//先忽略所有
+    CollisionBox->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);//只trace一个channel
+    ```
+
+- 有时会出现**多个武器ui同时显示的问题**，这里暂时用Set（不含重复元素）来暂存trace到的Item，每次trace到一个新的item时，就把set里其它的item设置为不可见并remove。
+
+示意图如下：
+
+![](./imgs/PickupWidgetInGame.png)
