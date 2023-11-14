@@ -352,3 +352,7 @@ GetCharacterMovement()->AirControl = 0.2f;//[0, 1]在空中时输入的影响
 示意图如下：
 
 ![](./imgs/PickupWidgetInGame.png)
+
+## 9 交换武器/扔武器
+
+设置E键按下时，若面前有武器，则交换；若没有，则扔出当前武器。

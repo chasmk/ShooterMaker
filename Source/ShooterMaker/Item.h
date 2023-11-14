@@ -15,9 +15,27 @@ enum class EItemRarity : uint8
 	Eir_UnCommon UMETA(DisplayName = "UnCommon"),
 	Eir_Rare UMETA(DisplayName = "Rare"),
 	Eir_Legendary UMETA(DisplayName = "Legendary"),
-		
+
 	Eir_Max UMETA(DisplayName = "DefaultMax")
 };
+
+UENUM(BlueprintType)
+enum class EItemState : uint8
+{
+	//待拾取状态
+	Eis_Pickup UMETA(DisplayName = "Pickup"),
+	//拾取后在空中飞状态
+	Eis_EquipInterping UMETA(DisplayName = "EquipInterping"),
+	//在背包中状态
+	Eis_PickedUp UMETA(DisplayName = "PickedUp"),
+	//拿在手中的状态
+	Eis_Equipped UMETA(DisplayName = "Equipped"),
+	//扔出枪在空中状态
+	Eis_Falling UMETA(DisplayName = "Falling"),
+
+	Eis_Max UMETA(DisplayName = "DefaultMax")
+};
+
 
 UCLASS()
 class SHOOTERMAKER_API AItem : public AActor
@@ -31,7 +49,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 protected:
-
+	//根据更新的状态设置item属性
+	void SetItemProperties(EItemState State);
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
@@ -52,7 +71,14 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Properties", meta = (AllowPrivateAccess = true))
 	EItemRarity StarLevel;
 
-	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
+	EItemState ItemState; //item当前所处状态
+
+
 public:
-	void SetPickupWidgetVisibility(bool bVisible) const { if(PickupWidget) PickupWidget->SetVisibility(bVisible); }
+	void SetToEquippedMode() const;
+	void SetPickupWidgetVisibility(bool bVisible) const;
+	void SetItemState(EItemState InState);
+	FORCEINLINE EItemState GetCurrentState() const { return ItemState; }
+	FORCEINLINE USkeletalMeshComponent* GetItemMesh() const { return ItemMesh; }
 };

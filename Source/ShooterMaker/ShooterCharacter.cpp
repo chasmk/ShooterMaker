@@ -5,7 +5,9 @@
 
 #include "DrawDebugHelpers.h"
 #include "Item.h"
+#include "Weapon.h"
 #include "Camera/CameraComponent.h"
+#include "Components/BoxComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -80,6 +82,9 @@ void AShooterCharacter::BeginPlay()
 	BaseTurnRate = HipTurnRate;
 	BaseLookUpRate = HipLookUpRate;
 
+	//生成默认武器并接在手上
+	EquipWeapon(SpawnDefaultWeapon());
+	
 	//设置trace Item的timer
 	GetWorldTimerManager().SetTimer(
 		ItemTraceTimer,
@@ -109,7 +114,14 @@ void AShooterCharacter::Tick(float DeltaTime)
 		FColor::Red,
 		FString::Printf(TEXT("VelocityRotation %f"), GetVelocity().Rotation().Yaw));
 */
-
+	if (EquippedWeapon)
+	{
+		GEngine->AddOnScreenDebugMessage(
+		1,
+		0.f,
+		FColor::Blue,
+		FString::Printf(TEXT("WeaponState: %s"), *UEnum::GetValueAsString(EquippedWeapon->GetCurrentState())));
+	}
 	CalculateCrosshairSpread(DeltaTime);
 }
 
@@ -146,6 +158,59 @@ void AShooterCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
+AWeapon* AShooterCharacter::SpawnDefaultWeapon()
+{
+	if (DefaultWeaponClass)
+	{//生成默认的武器并接在右手上
+		AWeapon* DefaultWeapon = GetWorld()->SpawnActor<AWeapon>(DefaultWeaponClass);
+		return DefaultWeapon;
+	}
+	return nullptr;
+}
+
+void AShooterCharacter::EquipWeapon(AWeapon* WeaponToEquip)
+{
+	if (WeaponToEquip)
+	{
+		const USkeletalMeshSocket* HandSocket = GetMesh()->GetSocketByName(FName("RHSocket"));
+		if (HandSocket)
+		{
+			HandSocket->AttachActor(WeaponToEquip, GetMesh());
+			WeaponToEquip->SetToEquippedMode();
+		}
+		EquippedWeapon = WeaponToEquip;
+		EquippedWeapon->SetItemState(EItemState::Eis_Equipped);
+	}
+	
+}
+
+void AShooterCharacter::DropWeapon()
+{
+	if (EquippedWeapon)
+	{
+		const FDetachmentTransformRules DetachmentTransformRules(EDetachmentRule::KeepWorld, true);
+		EquippedWeapon->GetItemMesh()->DetachFromComponent(DetachmentTransformRules);
+		EquippedWeapon->SetItemState(EItemState::Eis_Falling);
+		EquippedWeapon->ThrowWeapon();
+		EquippedWeapon = nullptr;
+	}
+}
+
+void AShooterCharacter::SwapWeapon(AWeapon* NewWeapon)
+{
+	DropWeapon();
+	EquipWeapon(NewWeapon);
+}
+
+void AShooterCharacter::SelectButtonPressed()
+{
+	SwapWeapon(Cast<AWeapon>(CurrentHitItem));
+}
+
+void AShooterCharacter::SelectButtonReleased()
+{
+}
+
 void AShooterCharacter::FireWeapon()
 {
 	/*if (GEngine)
@@ -159,6 +224,11 @@ void AShooterCharacter::FireWeapon()
 		);
 	}*/
 
+	if (EquippedWeapon == nullptr)
+	{
+		return;
+	}
+	
 	//开枪声音
 	if (FireSound)
 	{
@@ -431,7 +501,7 @@ void AShooterCharacter::TraceItem()
 {
 	UKismetSystemLibrary::Delay(GetWorld(), 0.2f, FLatentActionInfo());
 	FHitResult ItemTraceResult;
-	AItem* HitItem = nullptr;
+	CurrentHitItem = nullptr;
 	FVector tmp;//充数用
 	if (GetCrosshairTraceResult(ItemTraceResult, tmp, 900.f))
 	{
@@ -441,25 +511,25 @@ void AShooterCharacter::TraceItem()
 			FColor::Blue,
 			FString::Printf(TEXT("111")));*/
 		
-		HitItem = Cast<AItem>(ItemTraceResult.GetActor());
-		if (HitItem)
+		CurrentHitItem = Cast<AItem>(ItemTraceResult.GetActor());
+		if (CurrentHitItem)
 		{
-			LastTraceItem = HitItem;
-			HitItem->SetPickupWidgetVisibility(true);
+			LastTraceItem = CurrentHitItem;
+			CurrentHitItem->SetPickupWidgetVisibility(true);
 			bool bIsTraced;
-			TraceItems.Add(HitItem, &bIsTraced);
+			TraceItems.Add(CurrentHitItem, &bIsTraced);
 			if(!bIsTraced && TraceItems.Num() > 1)
 			{//第一次追踪该item，其它item都设置为不可见
 				for(AItem* i : TraceItems)
 				{
-					if (i != HitItem)
+					if (i != CurrentHitItem)
 					{
 						i->SetPickupWidgetVisibility(false);
 						//TraceItems.Remove(i);
 					}
 				}
 				TraceItems.Reset();
-				TraceItems.Add(HitItem);
+				TraceItems.Add(CurrentHitItem);
 			}
 		}
 		else if (LastTraceItem)
@@ -498,4 +568,7 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAction("FireButton", IE_Released, this, &AShooterCharacter::FireWeaponReleased);
 	PlayerInputComponent->BindAction("AimingButton", IE_Pressed, this, &AShooterCharacter::AimingButtonPressed);
 	PlayerInputComponent->BindAction("AimingButton", IE_Released, this, &AShooterCharacter::AimingButtonReleased);
+	PlayerInputComponent->BindAction("Select", IE_Pressed, this, &AShooterCharacter::SelectButtonPressed);
+	PlayerInputComponent->BindAction("Select", IE_Released, this, &AShooterCharacter::SelectButtonReleased);
+
 }

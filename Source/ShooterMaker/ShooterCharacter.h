@@ -28,6 +28,14 @@ protected:
 	void TurnAtRate(float Rate); //Rate 介于0-1之间, 1代表100%是我们期望速率
 	void LookUpAtRate(float Rate); //Rate 介于0-1之间
 
+	class AWeapon* SpawnDefaultWeapon();
+	void EquipWeapon(AWeapon* WeaponToEquip);
+	void DropWeapon();// 把手里武器扔地上
+	void SwapWeapon(AWeapon* NewWeapon);//面前有武器时与手里武器交换
+
+	void SelectButtonPressed();
+	void SelectButtonReleased();
+	
 	void FireWeapon(); //按下鼠标左键时触发
 	void FireCallBack();//FireTimer的call back
 	void FireWeaponPressed(); //按下鼠标左键时触发
@@ -43,7 +51,6 @@ protected:
 	void CalculateCrosshairSpread(float DeltaTime);//计算准心实时偏移量
 	void StartCrosshairBulletFire();//开启射击时timer
 	void FinishCrosshairBulletFire();//射击时timer的call back
-
 	
 	//从准心出发trace item
 	void TraceItem();
@@ -116,12 +123,21 @@ private:
 	FTimerHandle CrosshairShootTimer;
 
 	FTimerHandle ItemTraceTimer;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Trace, meta = (AllowPrivateAccess = true))
 	class AItem* LastTraceItem;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Trace, meta = (AllowPrivateAccess = true))
+	AItem* CurrentHitItem;
 	TSet<AItem*> TraceItems;
 
 	/**
 	 * 开枪相关变量
 	 */
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Combat, meta = (AllowPrivateAccess = "true"))
+	AWeapon* EquippedWeapon;//当前装备的武器
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Combat, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AWeapon> DefaultWeaponClass;//蓝图中默认的设置
 	
 	FTimerHandle FireTimer;
 	

@@ -12,14 +12,20 @@ class SHOOTERMAKER_API AWeapon : public AItem
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AWeapon();
+	virtual void Tick(float DeltaSeconds) override;
 
+	void ThrowWeapon();
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+
+	void StopFalling();
+	
+private:
+	FTimerHandle ThrowWeaponTimer;
+	float ThrowWeaponTime;
+	bool bFalling;
 
 public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+
+	
 };
