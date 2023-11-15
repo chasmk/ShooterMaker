@@ -52,7 +52,16 @@ protected:
 	//根据更新的状态设置item属性
 	void SetItemProperties(EItemState State);
 
+	//ItemInterpTimer的call back
+	void FinishInterping();
+
+	//tick调用，更新item的位置
+	void ItemInterp(float DeltaTime);
+
 private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
+	class AShooterCharacter* ShooterCharacter;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
 	USkeletalMeshComponent* ItemMesh; //武器的mesh
 
@@ -73,12 +82,36 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
 	EItemState ItemState; //item当前所处状态
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Item Properties", meta = (AllowPrivateAccess = true))
+	class UCurveFloat* ItemZCurve;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
+	FVector ItemInterpStartLocation;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
+	FVector CameraTargetLocation;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
+	bool bInterping;
+
+	FTimerHandle ItemInterpTimer;//武器在空中飞的计时器
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
+	float ZCurveTime;
+
+	float InterpInitialYawOffset;//武器在空中时和相机的相对旋转偏移
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = true))
+	UCurveFloat* ItemScaleCurve;//武器在空中时的大小放缩曲线
+	
 public:
 	void SetToEquippedMode() const;
 	void SetPickupWidgetVisibility(bool bVisible) const;
 	void SetItemState(EItemState InState);
 	FORCEINLINE EItemState GetCurrentState() const { return ItemState; }
 	FORCEINLINE USkeletalMeshComponent* GetItemMesh() const { return ItemMesh; }
+
+	//由角色类调用
+	void StartItemCurve(AShooterCharacter* Character);
 };

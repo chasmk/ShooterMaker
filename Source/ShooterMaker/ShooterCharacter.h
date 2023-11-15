@@ -56,6 +56,10 @@ protected:
 	void TraceItem();
 
 private:
+	/** 
+	 * Actor Components
+	 */
+	
 	/**
 	 *  相机相关
 	 */
@@ -63,7 +67,7 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom; //用于连接角色和相机的弹簧臂
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* FollowCamera;
+	class UShooterCameraComponent* FollowCamera;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	float BaseTurnRate; //单位是 度/秒
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -163,8 +167,9 @@ private:
 
 public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	FORCEINLINE UShooterCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	FORCEINLINE bool GetAiming() const { return bAiming; }
 	UFUNCTION(BlueprintCallable)
 	float GetCrosshairSpreadMultiplier() const { return CrosshairSpreadMultiplier; }
+	void GetPickupItem(AItem* Item);
 };

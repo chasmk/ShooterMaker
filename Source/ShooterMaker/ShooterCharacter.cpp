@@ -6,8 +6,8 @@
 #include "DrawDebugHelpers.h"
 #include "Item.h"
 #include "Weapon.h"
-#include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/ShooterCameraComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -44,6 +44,8 @@ AShooterCharacter::AShooterCharacter() :
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	//以下初始化Actor Component
+	
 	//弹簧臂初始化
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -52,7 +54,7 @@ AShooterCharacter::AShooterCharacter() :
 	CameraBoom->SocketOffset = FVector(0.f, 120.f, 70.f);
 
 	//相机初始化
-	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera222"));
+	FollowCamera = CreateDefaultSubobject<UShooterCameraComponent>(TEXT("FollowCamera222"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false; //相机不跟随controller旋转
 
@@ -204,7 +206,15 @@ void AShooterCharacter::SwapWeapon(AWeapon* NewWeapon)
 
 void AShooterCharacter::SelectButtonPressed()
 {
-	SwapWeapon(Cast<AWeapon>(CurrentHitItem));
+	//SwapWeapon(Cast<AWeapon>(CurrentHitItem));
+	if (CurrentHitItem)
+	{  
+		CurrentHitItem->StartItemCurve(this);
+	}
+	else
+	{
+		DropWeapon();
+	}
 }
 
 void AShooterCharacter::SelectButtonReleased()
@@ -540,6 +550,15 @@ void AShooterCharacter::TraceItem()
 	else if (LastTraceItem)
 	{
 		LastTraceItem->SetPickupWidgetVisibility(false);
+	}
+}
+
+void AShooterCharacter::GetPickupItem(AItem* Item)
+{
+	auto Weapon = Cast<AWeapon>(Item);
+	if (Weapon)
+	{
+		SwapWeapon(Weapon);
 	}
 }
 

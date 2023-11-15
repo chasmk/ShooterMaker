@@ -42,3 +42,40 @@ Item的父类，
     FRotator(0.f, GetItemMesh()->GetComponentRotation().Yaw, 0.f);
     ```
 
+### 2.2 拾取时飞行曲线
+
+想要的效果：拾取武器时让其在空中以曲线飞到面前（放大），再向下飞（进入背包）同时缩小
+
+- 首先获取武器当前位置和目标位置（根据相机的位置计算）
+
+- 开始时在Item类开启一个Timer，期间武器处于`EItemState::Eis_EquipInterping`状态。
+
+- Timer期间每帧更新Item的位置，旋转和Scale，使用`VInterpTp`和`RInterpTo`。
+
+  - 其中位置的Z值单独用曲线设置，输入Timer已用时间，返回相应的值。注意这里是在Z的相对位置上的缩放值，不是世界坐标。
+
+    - ```c++
+      UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Item Properties", meta = (AllowPrivateAccess = true))
+      UCurveFloat* ItemZCurve;//定义一个曲线，在蓝图中设置
+      
+      //根据Timer获取曲线上的值
+      const float ElapsedTime = GetWorldTimerManager().GetTimerElapsed(ItemInterpTimer);
+      const float CurveValue = ItemZCurve->GetFloatValue(ElapsedTime);
+      ```
+
+  - Rotation是插值转到侧面面对我们即可
+
+  - Scale也是用曲线实现。
+
+    - ```c++
+      const float ScaleCurveValue = ItemScaleCurve->GetFloatValue(ElapsedTime);
+      SetActorScale3D(FVector(ScaleCurveValue));
+      ```
+
+
+
+最终效果：
+
+
+
+![](./imgs/InterpItem.gif)
