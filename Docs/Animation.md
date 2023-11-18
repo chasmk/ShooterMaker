@@ -6,6 +6,8 @@
 
 ## 0 基础概念
 
+### Montage相关
+
 - **Anim Montage**: 动画蒙太奇可包含一个或多个动画的资产。它至少有一个Section - 称为 "Default"。可以在蒙太奇时间轴的任意位置向蒙太奇添加新的Section。您可以随意移动、调整等。
 - **Montage Section**: 动画蒙太奇的组成部分，用于将蒙太奇分割成可单独播放的片段。播放蒙太奇时，蒙太奇将从头开始播放。不过它并不会总是按顺序播放所有蒙太奇片段。哪些段落会在其他段落之后播放，取决于蒙太奇Section选项卡中的配置，可通过Window -> Montage Sections进行访问：
   - 在 C++ 中，使用 Montage_Play()播放蒙太奇，使用 Montage_JumpToSection()播放单个Section。
@@ -163,3 +165,105 @@ Aiming状态就是一个单帧pose和Locomotion做Layered Blend。另外调整�
 ## 6 Jumping
 
 Tips: 在状态机中也能加状态机
+
+## 7 Turn In Place
+
+ Turn In Place是指我们站在原地时，当镜头旋转角度和角色正对方向到一定角度后，角色会自己转到我们镜头面对方向的一种高级动画机制。接下来说明如何把它加到ABP中。
+
+### 7.1 基础变量创建
+
+先在`ShooterAnimInstance.h`里创建几个变量，如下：
+
+```c++
+//记录当前角色的Rotation Yaw
+float CharacterYaw;
+float LastCharacterYaw;
+
+//记录当前角色相机旋转和Root方向的Yaw Offset
+UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=TurnInPlace, meta = (AllowPrivateAccess = "true"))
+float RootYawOffset;
+
+//在旋转动画播放期间动画曲线的值
+float CurveYaw;
+float LastCurveYaw;
+```
+
+首先在角色类中我们有如下设置，即角色会跟随鼠标旋转但不随输入方向旋转。
+
+```c++
+bUseControllerRotationYaw = true;
+GetCharacterMovement()->bOrientRotationToMovement = false;
+```
+
+但现在我们想让鼠标转到一定角度以后再让角色转过来，所以我们用一个变量`RootYawOffset`记录这个差值并每帧更新。
+
+### 7.2 动画蓝图
+
+有了变量后，我们在动画蓝图里添加`Rotate Root Bone`节点，把`RootYawOffset`的值绑定到Yaw上面。此时我们就能实现相机转但角色不转的效果了。
+
+![](./imgs/RotateRootBone.png)
+
+接下来在原来的Idle动画处创建一个状态机，把Idle和Turn In Place的动画放在一起，结构如下：
+
+![](./imgs/TurnInPlaceSM.png)
+
+其中的转换条件就是用`RootYawOffset`的值等等。
+
+### 7.3 动画曲线
+
+在Turn In Place动画里分别创建两个曲线，一个记录root的yaw旋转角度变化，一个meta Curve标记当前正在播放此动画（恒为1）。第一个曲线如下图所示，大致是一个从-90到0的曲线。其实只要上下限符合均可。
+
+![](./imgs/TurnRotateCurve.png)
+
+### 7.4 TurnInPlace函数实现
+
+有了状态机，动画曲线等准备工作，接下来我们就根据这些值来更新`RootYawOffset`。
+
+首先是`RootYawOffset`的计算更新过程：
+
+```c++
+LastCharacterYaw = CharacterYaw;//记录上一帧的Yaw
+CharacterYaw = ShooterCharacter->GetActorRotation().Yaw;//更新现在的yaw
+const float YawOffset = CharacterYaw - LastCharacterYaw;//现在和上一帧之间的差值
+//RootYawOffset clamp到[-180, 180]
+RootYawOffset = UKismetMathLibrary::NormalizeAxis(RootYawOffset - YawOffset);//更新
+```
+
+下面是旋转动画播放时`RootYawOffset`额外的更新，首先我们获取动画曲线里和上一帧的差值，并根据左转/右转把差值加到`RootYawOffset`上。此外还有补偿的操作，这是因为旋转时我们的角度一般不会正好等于90度，而如果不补上多出来的部分，就会导致角色和相机方向有偏差，会出现抽搐。加上补偿的角度后，不管我们转多少度，最终角色都能转到初始时的方向。
+
+```c++
+if (GetCurveValue(FName(TEXT("Turning"))) == 1.f)//此时正在播放turning动画
+{
+    LastCurveYaw = CurveYaw;
+    CurveYaw = GetCurveValue(FName(TEXT("DistanceCurve")));
+    const float CurveYawOffset = CurveYaw - LastCurveYaw;
+    if (RootYawOffset > 0)
+    {
+        //向左转，root yaw需要减小
+        RootYawOffset = UKismetMathLibrary::NormalizeAxis(RootYawOffset - CurveYawOffset);
+    }
+    else
+    {
+        //向右转
+        RootYawOffset = UKismetMathLibrary::NormalizeAxis(RootYawOffset + CurveYawOffset);
+    }
+    //补偿多出来的yaw
+    const float ABSRootYawOffset = FMath::Abs(RootYawOffset);
+    if (ABSRootYawOffset > 90.f)
+    {
+        const float YawExcess =  ABSRootYawOffset - 90.f;
+        RootYawOffset > 0 ? RootYawOffset -= YawExcess : RootYawOffset += YawExcess;
+    }
+}
+else
+{//重置操作，保证每次都从-90开始
+    CurveYaw = -90.f;
+}
+```
+
+
+
+最终效果如下所示：
+
+![](./imgs/TurnInPlace.gif)
+

@@ -14,7 +14,7 @@ class SHOOTERMAKER_API UShooterAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
 public:
-	
+	UShooterAnimInstance();
 	
 	/**
 	 * @brief 每帧调用， 更新角色的运动状态变量
@@ -23,7 +23,13 @@ public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 	
 	virtual void NativeInitializeAnimation() override;
+protected:
 
+	//更新原地旋转的变量值
+	void TurnInPlace();
+
+
+	
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Moement, meta = (AllowPrivateAccess = "true"))
 	class AShooterCharacter* ShooterCharacter;
@@ -49,7 +55,19 @@ private:
 	float LastMovementOffsetYaw;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Movement, meta = (AllowPrivateAccess = "true"))
-	bool bAiming;
+	bool bAiming;//是否在瞄准
+
+	/***
+	 * 以下用于Turn In Place
+	 */
+	
+	float CharacterYaw;
+	float LastCharacterYaw;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=TurnInPlace, meta = (AllowPrivateAccess = "true"))
+	float RootYawOffset;
+	float CurveYaw;
+	float LastCurveYaw;
+
 
 public:
 	

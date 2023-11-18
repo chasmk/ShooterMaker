@@ -31,7 +31,7 @@ protected:
 	void MoveRight(float Value);
 	void TurnAtRate(float Rate); //Rate 介于0-1之间, 1代表100%是我们期望速率
 	void LookUpAtRate(float Rate); //Rate 介于0-1之间
-
+	void ToggleView();
 
 	void InitializeAmmoMap();
 
@@ -85,7 +85,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom; //用于连接角色和相机的弹簧臂
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera, meta = (AllowPrivateAccess = "true"))
-	class UShooterCameraComponent* FollowCamera;
+	class UShooterCameraComponent* FollowCamera;//第三人称相机
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera, meta = (AllowPrivateAccess = "true"))
+	class UShooterCameraComponent* FollowCameraFP;//第一人称相机
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	float BaseTurnRate; //单位是 度/秒
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -102,6 +104,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, meta = (AllowPrivateAccess = "true"),
 		meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
 	float AimingLookUpRate;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	bool bIsThirdView;//标记当前是第几人称视角
 
 	/**
 	 * 瞄准前后相机的FOV设置
@@ -180,7 +184,7 @@ private:
 
 public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	FORCEINLINE UShooterCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	FORCEINLINE UShooterCameraComponent* GetFollowCamera() const { return bIsThirdView ? FollowCamera : FollowCameraFP; }
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE UCombatComponent* GetCombatComponent() const { return CombatComponent; }
 

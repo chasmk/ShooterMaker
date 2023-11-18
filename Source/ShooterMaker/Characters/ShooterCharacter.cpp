@@ -26,6 +26,7 @@ AShooterCharacter::AShooterCharacter() :
 	AimingTurnRate(20.f),
 	AimingLookUpRate(20.f),
 	bAiming(false),
+	bIsThirdView(true),
 	//相机FOV
 	CameraDefaultFOV(0.f), // 在begin play中再初始化
 	CameraZoomedFOV(40.f),
@@ -59,10 +60,15 @@ AShooterCharacter::AShooterCharacter() :
 	CameraBoom->SocketOffset = FVector(0.f, 120.f, 70.f);
 
 	//相机初始化
-	FollowCamera = CreateDefaultSubobject<UShooterCameraComponent>(TEXT("FollowCamera222"));
+	FollowCamera = CreateDefaultSubobject<UShooterCameraComponent>(TEXT("FollowCameraTP111"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false; //相机不跟随controller旋转
 
+	FollowCameraFP = CreateDefaultSubobject<UShooterCameraComponent>(TEXT("FollowCameraFP222"));
+	FollowCameraFP->SetupAttachment(GetMesh(), FName(TEXT("head")));
+	FollowCameraFP->bUsePawnControlRotation = true; //相机跟随controller旋转
+	FollowCameraFP->SetAutoActivate(false);
+	
 	//角色不跟随controller(鼠标)旋转，controller只影响camera
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true; //true: 左右旋转跟随鼠标转
@@ -107,31 +113,35 @@ void AShooterCharacter::BeginPlay()
 void AShooterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	/* Yaw Offset调试
-	GEngine->AddOnScreenDebugMessage(
-		1,
-		0.f,
-		FColor::Blue,
-		FString::Printf(TEXT("BaseAimRotation %f"), GetBaseAimRotation().Yaw));
-	GEngine->AddOnScreenDebugMessage(
-		2,
-		0.f,
-		FColor::Green,
-		FString::Printf(TEXT("ControlRotation %f"), GetControlRotation().Yaw));
-	GEngine->AddOnScreenDebugMessage(
-		3,
-		0.f,
-		FColor::Red,
-		FString::Printf(TEXT("VelocityRotation %f"), GetVelocity().Rotation().Yaw));
-*/
-	if (CombatComponent->GetEquippedWeapon())
+	// Yaw Offset调试
+	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(
 			1,
-			0.f,
+			1.f,
 			FColor::Blue,
-			FString::Printf(
-				TEXT("CombatState: %s"), *UEnum::GetValueAsString(CombatComponent->GetCurrentCombatState())));
+			FString::Printf(TEXT("BaseAimRotation %f"), GetBaseAimRotation().Yaw));
+	
+		GEngine->AddOnScreenDebugMessage(
+			2,
+			1.f,
+			FColor::Green,
+			FString::Printf(TEXT("ControlRotation %f"), GetControlRotation().Yaw));
+		GEngine->AddOnScreenDebugMessage(
+			3,
+			1.f,
+			FColor::Red,
+			FString::Printf(TEXT("VelocityRotation %f"), GetVelocity().Rotation().Yaw));
+		if (CombatComponent->GetEquippedWeapon())
+		{
+			GEngine->AddOnScreenDebugMessage(
+				4,
+				1.f,
+				FColor::Yellow,
+				FString::Printf(
+					TEXT("CombatState: %s"), *UEnum::GetValueAsString(CombatComponent->GetCurrentCombatState())));
+
+		}
 	}
 	CalculateCrosshairSpread(DeltaTime);
 }
@@ -167,6 +177,26 @@ void AShooterCharacter::TurnAtRate(float Rate)
 void AShooterCharacter::LookUpAtRate(float Rate)
 {
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AShooterCharacter::ToggleView()
+{
+	if (bIsThirdView)
+	{
+		// FollowCameraFP->SetAutoActivate(true);
+		// FollowCameraTP->SetAutoActivate(false);
+		FollowCameraFP->SetActive(true);
+		FollowCamera->SetActive(false);
+		bIsThirdView = false;
+	}
+	else
+	{
+		// FollowCameraTP->SetAutoActivate(true);
+		// FollowCameraFP->SetAutoActivate(false);
+		FollowCamera->SetActive(true);
+		FollowCameraFP->SetActive(false);
+		bIsThirdView = true;
+	}
 }
 
 void AShooterCharacter::InitializeAmmoMap()
@@ -580,4 +610,6 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAction("Select", IE_Pressed, this, &AShooterCharacter::SelectButtonPressed);
 	PlayerInputComponent->BindAction("Select", IE_Released, this, &AShooterCharacter::SelectButtonReleased);
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &AShooterCharacter::ReloadWeaponPressed);
+	PlayerInputComponent->BindAction("ToggleView", IE_Pressed, this, &AShooterCharacter::ToggleView);
+
 }
