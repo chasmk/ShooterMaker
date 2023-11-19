@@ -267,3 +267,18 @@ else
 
 ![](./imgs/TurnInPlace.gif)
 
+## 8 Aim Offset
+
+Aim Offset是指我们站在原地旋转相机时，角色瞄准方向跟随相机正对方向移动的机制。
+
+实现时，需要两个变量，即此时角色的Yaw 与 Pitch，然后再创建一个Aim Offset动画即可。
+
+- 创建Aim Offset，类似于blend space 2d
+  - ![](./imgs/AimOffset.png)
+- 将其添加到动画蓝图中
+  - ![](./imgs/AOBP.png)
+
+最终效果如下：
+
+![](./imgs/AimOffset.gif)
+

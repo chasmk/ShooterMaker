@@ -68,7 +68,14 @@ private:
 	float CurveYaw;
 	float LastCurveYaw;
 
+	/**
+	 * 以下用于Aim Offset
+	 */
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=TurnInPlace, meta = (AllowPrivateAccess = "true"))
+	float AOPitch;
 
+	
 public:
 	
 };

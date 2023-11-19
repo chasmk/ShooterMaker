@@ -57,7 +57,8 @@ void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 		//更新原地旋转变量
 		TurnInPlace();
-
+		
+		//更新是否在瞄准
 		bAiming = ShooterCharacter->GetAiming();
 	}
 }
@@ -73,6 +74,8 @@ void UShooterAnimInstance::TurnInPlace()
 {
 	if (ShooterCharacter && Speed <= 0)
 	{
+		AOPitch = ShooterCharacter->GetBaseAimRotation().Pitch; 
+		
 		if (GetCurveValue(FName(TEXT("Turning"))) == 1.f)
 		{//此次正在播放turning动画
 			LastCurveYaw = CurveYaw;
