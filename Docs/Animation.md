@@ -282,3 +282,32 @@ Aim Offset是指我们站在原地旋转相机时，角色瞄准方向跟随相�
 
 ![](./imgs/AimOffset.gif)
 
+## 9 Lean
+
+Lean是指在**跑动中**角色身体随着角色Yaw的变化而倾斜。
+
+- 首先在C++中创建变量并更新，最终我们使用`LeanYawOffset`来更新动画
+
+  - ```c++
+    void UShooterAnimInstance::Lean(float DeltaTime)
+    {
+    	if (ShooterCharacter == nullptr) return;
+    
+    	LastLeanRotation = LeanRotation;
+    	LeanRotation = ShooterCharacter->GetActorRotation();
+    	//标准化A-B, 避免-180与180之间过渡时角色抽搐
+    	const FRotator Delta = UKismetMathLibrary::NormalizedDeltaRotator(LeanRotation, LastLeanRotation);
+    
+    	//转动越快，该值越大，即lean的角度就越大
+    	const float Target = Delta.Yaw / DeltaTime;
+    	const float Interp = FMath::FInterpTo(LeanYawOffset, Target, DeltaTime, 6.f);
+    
+    	LeanYawOffset = FMath::Clamp(Interp, -90.f, 90.f);
+    }
+    ```
+
+- 然后在BS中添加Lean动画，如下所示，针对fwd，bwd，left和right都添加90度（右）和-90度(左)的lean动画
+
+  - ![](./imgs/leanBS.png)
+
+- 最后在ABP里把`LeanYawOffset`的值应用到BS中即可，最终效果如下：![](./imgs/Lean.gif)

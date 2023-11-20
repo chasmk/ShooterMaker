@@ -13,23 +13,24 @@ UCLASS()
 class SHOOTERMAKER_API UShooterAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
+
 public:
 	UShooterAnimInstance();
-	
+
 	/**
 	 * @brief 每帧调用， 更新角色的运动状态变量
 	 * @param DeltaSeconds 
 	 */
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
-	
-	virtual void NativeInitializeAnimation() override;
-protected:
 
+	virtual void NativeInitializeAnimation() override;
+
+protected:
 	//更新原地旋转的变量值
 	void TurnInPlace();
+	//更新运动时Lean相关变量
+	void Lean(float DeltaTime);
 
-
-	
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Moement, meta = (AllowPrivateAccess = "true"))
 	class AShooterCharacter* ShooterCharacter;
@@ -55,12 +56,12 @@ private:
 	float LastMovementOffsetYaw;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Movement, meta = (AllowPrivateAccess = "true"))
-	bool bAiming;//是否在瞄准
+	bool bAiming; //是否在瞄准
 
 	/***
 	 * 以下用于Turn In Place
 	 */
-	
+
 	float CharacterYaw;
 	float LastCharacterYaw;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=TurnInPlace, meta = (AllowPrivateAccess = "true"))
@@ -69,13 +70,20 @@ private:
 	float LastCurveYaw;
 
 	/**
+	 * 以下用于 Lean
+	 */
+
+	FRotator LeanRotation;
+	FRotator LastLeanRotation;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Lean, meta = (AllowPrivateAccess = "true"))
+	float LeanYawOffset;
+
+	/**
 	 * 以下用于Aim Offset
 	 */
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=TurnInPlace, meta = (AllowPrivateAccess = "true"))
 	float AOPitch;
 
-	
 public:
-	
 };

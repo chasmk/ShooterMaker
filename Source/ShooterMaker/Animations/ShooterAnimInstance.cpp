@@ -17,7 +17,10 @@ UShooterAnimInstance::UShooterAnimInstance() :
 	CharacterYaw(0.f),
 	LastCharacterYaw(0.f),
 	RootYawOffset(0.f),
-	CurveYaw(-90.f)
+	CurveYaw(-90.f),
+	LeanRotation(FRotator(0.f)),
+	LastLeanRotation(FRotator(0.f)),
+	LeanYawOffset(0.f)
 {
 }
 
@@ -57,12 +60,13 @@ void UShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 		//更新原地旋转变量
 		TurnInPlace();
-		
+		//更新lean变量
+		Lean(DeltaSeconds);
+
 		//更新是否在瞄准
 		bAiming = ShooterCharacter->GetAiming();
 	}
 }
-
 
 void UShooterAnimInstance::NativeInitializeAnimation()
 {
@@ -74,10 +78,11 @@ void UShooterAnimInstance::TurnInPlace()
 {
 	if (ShooterCharacter && Speed <= 0)
 	{
-		AOPitch = ShooterCharacter->GetBaseAimRotation().Pitch; 
-		
+		AOPitch = ShooterCharacter->GetBaseAimRotation().Pitch;
+
 		if (GetCurveValue(FName(TEXT("Turning"))) == 1.f)
-		{//此次正在播放turning动画
+		{
+			//此次正在播放turning动画
 			LastCurveYaw = CurveYaw;
 			CurveYaw = GetCurveValue(FName(TEXT("DistanceCurve")));
 			const float CurveYawOffset = CurveYaw - LastCurveYaw;
@@ -95,7 +100,7 @@ void UShooterAnimInstance::TurnInPlace()
 			const float ABSRootYawOffset = FMath::Abs(RootYawOffset);
 			if (ABSRootYawOffset > 90.f)
 			{
-				const float YawExcess =  ABSRootYawOffset - 90.f;
+				const float YawExcess = ABSRootYawOffset - 90.f;
 				RootYawOffset > 0 ? RootYawOffset -= YawExcess : RootYawOffset += YawExcess;
 			}
 		}
@@ -103,7 +108,7 @@ void UShooterAnimInstance::TurnInPlace()
 		{
 			CurveYaw = -90.f;
 		}
-		
+
 		//正常更新yaw
 		LastCharacterYaw = CharacterYaw;
 		CharacterYaw = ShooterCharacter->GetActorRotation().Yaw;
@@ -115,7 +120,7 @@ void UShooterAnimInstance::TurnInPlace()
 		{
 			GEngine->AddOnScreenDebugMessage(
 				5,
-				0.f,
+				-1,
 				FColor::Purple,
 				FString::Printf(TEXT("RootYawOffset: %f"), RootYawOffset));
 		}
@@ -126,6 +131,29 @@ void UShooterAnimInstance::TurnInPlace()
 		CurveYaw = -90.f;
 		RootYawOffset = 0.f;
 		CharacterYaw = ShooterCharacter->GetActorRotation().Yaw;
+	}
+}
 
+void UShooterAnimInstance::Lean(float DeltaTime)
+{
+	if (ShooterCharacter == nullptr) return;
+
+	LastLeanRotation = LeanRotation;
+	LeanRotation = ShooterCharacter->GetActorRotation();
+	//避免-180与180之间过渡时角色抽搐
+	const FRotator Delta = UKismetMathLibrary::NormalizedDeltaRotator(LeanRotation, LastLeanRotation);
+
+	//转动越快，该值越大，即lean的角度就越大
+	const float Target = Delta.Yaw / DeltaTime;
+	const float Interp = FMath::FInterpTo(LeanYawOffset, Target, DeltaTime, 6.f);
+
+	LeanYawOffset = FMath::Clamp(Interp, -90.f, 90.f);
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			6,
+			-1,
+			FColor::White,
+			FString::Printf(TEXT("LeanYawOffset: %f"), LeanYawOffset));
 	}
 }
